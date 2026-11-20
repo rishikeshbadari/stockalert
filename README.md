@@ -1,6 +1,6 @@
-# Welcome to your Expo app 👋
+# Stock Alert
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A foreground-only iPhone app for creating and monitoring stock price-zone alarms. It uses local persistence and a clearly labeled demo market-data provider.
 
 ## Get started
 
@@ -15,6 +15,22 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    ```bash
    npx expo start
    ```
+
+3. Run unit tests
+
+   ```bash
+   npm test
+   ```
+
+## Market data and notifications
+
+The app currently runs in DEMO mode. The mock provider emits simulated prices, so it must not be interpreted as live market data.
+
+For local Alpaca testing, copy `.env.example` to `.env.local` and enter your **rotated** Alpaca key and secret there. `.env.local` is ignored by Git. Reload the app after editing the file. With valid credentials the app connects to Alpaca's IEX stock-trade stream; otherwise it stays in clearly labeled DEMO mode. The selected feed can be changed with `EXPO_PUBLIC_ALPACA_FEED` (`iex`, `sip`, or `delayed_sip`), subject to account entitlements.
+
+**Local-development security note:** Expo inlines `EXPO_PUBLIC_` values into the app bundle. This direct client connection is only suitable for a private local app; anyone with access to the installed app can extract the credentials. Do not distribute the app or use valuable/reused credentials. A backend is required to keep keys private. The Alpaca key previously pasted into chat should be revoked and replaced before testing.
+
+Local notifications work in Expo Go; remote push notifications and background monitoring require a development build and a backend.
 
 In the output, you'll find options to open the app in a
 

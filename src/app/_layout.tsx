@@ -1,18 +1,17 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
+import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'react-native';
+import { AlarmStoreProvider } from '@/store/alarmStore';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
-
-SplashScreen.preventAutoHideAsync();
-
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+export default function RootLayout() {
+  const scheme = useColorScheme();
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <AlarmStoreProvider>
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+      <Stack screenOptions={{ headerShadowVisible: false }}>
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="alarm-form" options={{ presentation: 'modal', title: 'New Alarm' }} />
+      </Stack>
+    </AlarmStoreProvider>
   );
 }
