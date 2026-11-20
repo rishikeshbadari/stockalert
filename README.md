@@ -26,7 +26,9 @@ A foreground-only iPhone app for creating and monitoring stock price-zone alarms
 
 The app currently runs in DEMO mode. The mock provider emits simulated prices, so it must not be interpreted as live market data.
 
-For local Alpaca testing, copy `.env.example` to `.env.local` and enter your **rotated** Alpaca key and secret there. `.env.local` is ignored by Git. Reload the app after editing the file. With valid credentials the app connects to Alpaca's IEX stock-trade stream; otherwise it stays in clearly labeled DEMO mode. The selected feed can be changed with `EXPO_PUBLIC_ALPACA_FEED` (`iex`, `sip`, or `delayed_sip`), subject to account entitlements.
+For local Alpaca testing, copy `.env.example` to `.env.local` and enter your **rotated** Alpaca key and secret there. `.env.local` is ignored by Git. Reload the app after editing the file. With valid credentials the app connects to Alpaca's stock-quote stream and uses the best-bid/ask midpoint as its indicative price; it also fetches the latest quote when connecting or subscribing. Otherwise, it stays in clearly labeled DEMO mode. The selected feed can be changed with `EXPO_PUBLIC_ALPACA_FEED` (`iex`, `sip`, or `delayed_sip`), subject to account entitlements.
+
+Alpaca IEX covers quotes from IEX only, not a consolidated view of all exchanges. A fresh quote in the alarm zone can fire immediately when received, including while creating an alarm. Stale quotes are shown with their timestamp but do not trigger alarms. The app considers market data fresh for 30 seconds; a quote update is event-driven, not polled continuously.
 
 **Local-development security note:** Expo inlines `EXPO_PUBLIC_` values into the app bundle. This direct client connection is only suitable for a private local app; anyone with access to the installed app can extract the credentials. Do not distribute the app or use valuable/reused credentials. A backend is required to keep keys private. The Alpaca key previously pasted into chat should be revoked and replaced before testing.
 

@@ -117,6 +117,22 @@ describe('alarm state machine', () => {
     expect(stale.triggered).toBe(false);
   });
 
+  it('ignores future-dated prices', () => {
+    const future = evaluateAlarm(alarm(), update(180, '2026-11-18T20:01:00.000Z'), 30_000, nowMs);
+    expect(future.triggered).toBe(false);
+  });
+
+  it('triggers immediately when a fresh quote snapshot arrives in range', () => {
+    const snapshot = {
+      ...update(180),
+      source: 'Alpaca IEX midpoint',
+      isSnapshot: true,
+    };
+    const result = evaluateAlarm(alarm(), snapshot, 30_000, nowMs);
+    expect(result.triggered).toBe(true);
+    expect(result.alarm.lastPriceSource).toBe('Alpaca IEX midpoint');
+  });
+
   it('threshold edits reset without notification', () => {
     const edited = alarm({ lowerThreshold: 179, upperThreshold: 181, lastObservedPrice: 180 });
     const reset = resetAlarmState(edited);

@@ -6,12 +6,13 @@ type AlpacaMessage = {
   msg?: string;
   code?: number;
   S?: string;
-  p?: number;
+  bp?: number;
+  ap?: number;
   t?: string;
 };
 
-type LatestTradeResponse = {
-  trades?: Record<string, { p?: number; t?: string }>;
+type LatestQuoteResponse = {
+  quotes?: Record<string, { bp?: number; ap?: number; t?: string }>;
 };
 
 const RECONNECT_LIMIT_MS = 30_000;
@@ -40,6 +41,7 @@ export class AlpacaMarketDataProvider implements MarketDataProvider {
   }
 
   private setErrorMessage(message: string | null) {
+    if (this.errorMessage === message) return;
     this.errorMessage = message;
     this.statusCallbacks.forEach((callback) => callback(this.status));
   }
@@ -96,7 +98,7 @@ export class AlpacaMarketDataProvider implements MarketDataProvider {
     if (this.authenticated) {
       this.sendSubscription('unsubscribe', removed);
       this.sendSubscription('subscribe', added);
-      void this.fetchLatestPrices(added);
+      void this.fetchLatestPrices([...nextTickers]);
     }
   }
 
@@ -162,12 +164,16 @@ export class AlpacaMarketDataProvider implements MarketDataProvider {
         return;
       }
 
-      if (message.T !== 't' || !message.S || !Number.isFinite(message.p) || !message.t) return;
+      const bid = message.bp;
+      const ask = message.ap;
+      if (message.T !== 'q' || !message.S || typeof bid !== 'number' ||
+        typeof ask !== 'number' || !Number.isFinite(bid) || !Number.isFinite(ask) ||
+        !message.t || bid <= 0 || ask <= 0 || ask < bid) return;
       const update: PriceUpdate = {
         ticker: message.S.toUpperCase(),
-        price: message.p as number,
+        price: (bid + ask) / 2,
         timestamp: message.t,
-        source: `Alpaca ${this.feed.toUpperCase()}`,
+        source: `Alpaca ${this.feed.toUpperCase()} midpoint`,
       };
       this.setErrorMessage(null);
       this.priceCallbacks.forEach((callback) => callback(update));
@@ -176,7 +182,7 @@ export class AlpacaMarketDataProvider implements MarketDataProvider {
 
   private async fetchLatestPrices(tickers: string[]) {
     if (!tickers.length) return;
-    const url = new URL('https://data.alpaca.markets/v2/stocks/trades/latest');
+    const url = new URL('https://data.alpaca.markets/v2/stocks/quotes/latest');
     url.searchParams.set('symbols', tickers.join(','));
     url.searchParams.set('feed', this.feed);
 
@@ -188,32 +194,37 @@ export class AlpacaMarketDataProvider implements MarketDataProvider {
         },
       });
       if (!response.ok) {
-        const message = `Alpaca latest-trade snapshot failed (${response.status}); waiting for the live stream.`;
+        const message = `Alpaca latest-quote snapshot failed (${response.status}); waiting for the live stream.`;
         console.warn(message);
         this.setErrorMessage(message);
         return;
       }
 
-      const body = await response.json() as LatestTradeResponse;
-      Object.entries(body.trades ?? {}).forEach(([ticker, trade]) => {
-        if (!Number.isFinite(trade.p) || !trade.t) return;
+      const body = await response.json() as LatestQuoteResponse;
+      Object.entries(body.quotes ?? {}).forEach(([ticker, quote]) => {
+        const bid = quote.bp;
+        const ask = quote.ap;
+        const timestamp = quote.t;
+        if (typeof bid !== 'number' || typeof ask !== 'number' ||
+          !Number.isFinite(bid) || !Number.isFinite(ask) ||
+          bid <= 0 || ask <= 0 || ask < bid || typeof timestamp !== 'string') return;
         this.priceCallbacks.forEach((callback) => callback({
           ticker: ticker.toUpperCase(),
-          price: trade.p as number,
-          timestamp: trade.t as string,
-          source: `Alpaca ${this.feed.toUpperCase()}`,
+          price: (bid + ask) / 2,
+          timestamp,
+          source: `Alpaca ${this.feed.toUpperCase()} midpoint`,
           isSnapshot: true,
         }));
       });
     } catch (error) {
-      console.warn('Unable to retrieve Alpaca latest-trade snapshot', error);
-      this.setErrorMessage('Alpaca latest-trade snapshot unavailable; waiting for the live stream.');
+      console.warn('Unable to retrieve Alpaca latest-quote snapshot', error);
+      this.setErrorMessage('Alpaca latest-quote snapshot unavailable; waiting for the live stream.');
     }
   }
 
   private sendSubscription(action: 'subscribe' | 'unsubscribe', tickers: string[]) {
     if (!tickers.length || this.socket?.readyState !== WebSocket.OPEN || !this.authenticated) return;
-    this.socket.send(JSON.stringify({ action, trades: tickers }));
+    this.socket.send(JSON.stringify({ action, quotes: tickers }));
   }
 
   private scheduleReconnect() {

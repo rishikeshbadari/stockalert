@@ -20,7 +20,8 @@ export function evaluateAlarm(
   if (!Number.isFinite(update.price) || update.price <= 0) return { alarm, triggered: false };
 
   const updateMs = Date.parse(update.timestamp);
-  if (!Number.isFinite(updateMs) || nowMs - updateMs > staleAfterMs) {
+  const ageMs = nowMs - updateMs;
+  if (!Number.isFinite(updateMs) || ageMs < 0 || ageMs > staleAfterMs) {
     return { alarm, triggered: false };
   }
   if (

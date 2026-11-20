@@ -36,10 +36,10 @@ const provider: MarketDataProvider = hasAlpacaCredentials
   ? new AlpacaMarketDataProvider(alpacaKey, alpacaSecret, configuredFeed)
   : new MockMarketDataProvider();
 const dataSource = hasAlpacaCredentials
-  ? `LIVE (${configuredFeed.toUpperCase()})`
+  ? `LIVE (${configuredFeed.toUpperCase()} midpoint)`
   : 'DEMO';
 const priceSource = hasAlpacaCredentials
-  ? `Alpaca ${configuredFeed.toUpperCase()}`
+  ? `Alpaca ${configuredFeed.toUpperCase()} midpoint`
   : 'DEMO';
 
 function makeId() {
@@ -163,6 +163,12 @@ export function AlarmStoreProvider({ children }: { children: React.ReactNode }) 
       createdAt: now,
       updatedAt: now,
     };
+    const enabledTickers = [...new Set([
+      ...alarmsRef.current.filter((item) => item.enabled).map((item) => item.ticker),
+      ticker,
+    ])];
+    provider.subscribe(enabledTickers);
+
     const latestPrice = latestPriceByTickerRef.current.get(ticker);
     let alarmToSave = alarm;
     let triggered = false;
